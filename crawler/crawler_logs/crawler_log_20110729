@@ -1,0 +1,17 @@
+20110729232239(0): Changing log level to 4.
+20110729232239(1): 0 file(s) in cache directory, 0 successfully read.
+20110729232240(2): 7 hubs rows read from Hubs table:
+7 valid rows.
+0 invalid rows. 0 duplicate hubs.
+
+20110729232241(3): 12 deal links extracted from hub: http://www.buywithme.com/seattle/deals
+20110729232242(3): 6 deal links extracted from hub: http://www.groupon.com/portland/all
+20110729232242(2): Couldn't find cookie for http://livingsocial.com setting it now
+20110729232243(4): Set cookie to [HTTP::Cookies=HASH(0x10a8fe78)->as_string()]
+20110729232244(3): 6 deal links extracted from hub: http://livingsocial.com/cities/31-portland
+20110729232245(3): 5 deal links extracted from hub: http://tippr.com/seattle/
+20110729232336(3): 10 deal links extracted from hub: http://www.groupon.com/seattle/all
+20110729232337(3): 11 deal links extracted from hub: http://livingsocial.com/cities/27-seattle
+20110729232338(3): 3 deal links extracted from hub: http://tippr.com/portland/
+20110729232348(1): Releasing database lock. Response [Error: no row returned when attempting to delete crawler lock]
+20110729235918(0): Changing log level to 4.

@@ -1,0 +1,5 @@
+crawler/crawler_cache/
+crawler/yelp_cache/
+crawler/test/
+crawler/extractortestfiles/
+crawler/failed_extractions/
