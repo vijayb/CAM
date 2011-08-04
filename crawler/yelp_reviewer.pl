@@ -17,7 +17,7 @@ use getargs;
 use JSON::XS;
 
 use constant {
-    MAX_DAYS => 20,
+    MAX_DAYS => 2,
     YELP_CACHE_DIRECTORY => "./yelp_cache/",
     YELP_ID => "wu6Vp9sa7z62Wpv7H-7GwA"
 };
