@@ -8,11 +8,20 @@
     use strict;
     use warnings;
     use deal;
+    use logger;
     use grouponextractor;
     use livingsocialextractor;
     use buywithmeextractor;
     use tipprextractor;
-    use logger;
+    use travelzooextractor;
+    use angieslistextractor;
+    use giltcityextractor;
+    use yollarextractor;
+    use zoziextractor;
+    use bloomspotextractor;
+    use scoutmobextractor;
+    use amazonlocalextractor;
+
 
     my %company_to_extractor_map;
 
@@ -20,6 +29,14 @@
     $company_to_extractor_map{2} = \&livingsocialextractor::extract;
     $company_to_extractor_map{3} = \&buywithmeextractor::extract;
     $company_to_extractor_map{4} = \&tipprextractor::extract;
+    $company_to_extractor_map{5} = \&travelzooextractor::extract;
+    $company_to_extractor_map{6} = \&angieslistextractor::extract;
+    $company_to_extractor_map{7} = \&giltcityextractor::extract;
+    $company_to_extractor_map{8} = \&yollarextractor::extract;
+    $company_to_extractor_map{9} = \&zoziextractor::extract;
+    $company_to_extractor_map{10} = \&bloomspotextractor::extract;
+    $company_to_extractor_map{11} = \&scoutmobextractor::extract;
+    $company_to_extractor_map{12} = \&amazonlocalextractor::extract;
 
     sub extractDeal {
 	if ($#_ != 1) { die "Incorrect usage of extractDeal, need 2 ".

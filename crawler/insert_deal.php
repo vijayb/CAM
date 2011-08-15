@@ -52,6 +52,12 @@ if (isset($_POST[company_id]) &&
   $values = $values.",'$_POST[company_id]'";
 }
 
+if (isset($_POST[category_id]) &&
+    preg_match("/^[0-9]+$/", $_POST[category_id])) {
+  $fields = $fields.",category_id";
+  $values = $values.",'$_POST[category_id]'";
+}
+
 if (isset($_POST[title])) {
   $fields = $fields.",title";
   $values = $values.",'$_POST[title]'";
@@ -120,11 +126,13 @@ if (isset($_POST[image_url])) {
 if (isset($_POST[name])) {
   $fields = $fields.",name";
   $values = $values.",'$_POST[name]'";
+  $sql_addendum=$sql_addendum.", name='$_POST[name]'";
 }
 
 if (isset($_POST[website])) {
   $fields = $fields.",website";
   $values = $values.",'$_POST[website]'";
+  $sql_addendum=$sql_addendum.", website='$_POST[website]'";
 }
 
 if (isset($_POST[phone])) {

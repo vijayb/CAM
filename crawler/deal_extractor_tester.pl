@@ -2,12 +2,14 @@
 # Copyright (c) 2010, All Rights Reserved
 # Author: Vijay Boyapati (vijayb@gmail.com) July, 2010
 #
+# Provides a way of instrumenting dealextractor.pm for testing purposes.
 {
     use strict;
     use warnings;
     use deal;
     use dealextractor;
     use crawlerutils;
+    use dealclassifier;
 
     use Getopt::Long qw(GetOptionsFromArray);
 
@@ -29,7 +31,36 @@
     $domain_to_id_map{"http://www.tippr.com"} = 4;
     $domain_to_id_map{"https://www.tippr.com"} = 4;
     $domain_to_id_map{"https://tippr.com"} = 4;
+    $domain_to_id_map{"http://www.travelzoo.com"} = 5;
+    $domain_to_id_map{"https://www.travelzoo.com"} = 5;
+    $domain_to_id_map{"http://my.angieslist.com"} = 6;
+    $domain_to_id_map{"https://my.angieslist.com"} = 6;
+    $domain_to_id_map{"http://www.giltcity.com"} = 7;
+    $domain_to_id_map{"https://www.giltcity.com"} = 7;
+    $domain_to_id_map{"http://yollar.com"} = 8;
+    $domain_to_id_map{"https://yollar.com"} = 8;
+    $domain_to_id_map{"http://www.zozi.com"} = 9;
+    $domain_to_id_map{"https://www.zozi.com"} = 9;
+    $domain_to_id_map{"http://www.bloomspot.com"} = 10;
+    $domain_to_id_map{"https://www.bloomspot.com"} = 10;
+    $domain_to_id_map{"http://www.scoutmob.com"} = 11;
+    $domain_to_id_map{"https://www.scoutmob.com"} = 11;
+    $domain_to_id_map{"http://local.amazon.com"} = 12;
+    $domain_to_id_map{"https://local.amazon.com"} = 12;
 
+
+    my %category_map;
+
+    $category_map{1} = "Food";
+    $category_map{2} = "Health & Beauty";
+    $category_map{3} = "Fitness";
+    $category_map{4} = "Retail & Services";
+    $category_map{5} = "Activities & Events";
+    $category_map{6} = "Vacations";
+    $category_map{7} = "";
+    $category_map{8} = "";
+    $category_map{9} = "";
+    
 
     my ($deal_directory, $company_id, $deal_file);
     my ($verbose, $skiperrors, $numerrors, $numwarnings, $total_deal_pages);
@@ -103,7 +134,6 @@
 		    $domain_to_id_map{$domain} != $company_id) {
 		    return;
 		}
-
 		
 		$total_deal_pages++;
 		# We only want to run deal extraction on deal pages
@@ -122,6 +152,7 @@
 		$deal->company_id($domain_to_id_map{$domain});
 		
 		dealextractor::extractDeal($deal, \$content);
+		dealclassifier::classifyDeal($deal, \$content);
 		
 		if (defined($deal->title())) {
 		    printV("Title: [".$deal->title()."]\n", 1);
@@ -137,14 +168,14 @@
 		
 		if (defined($deal->price()) &&
 		    $deal->price() =~ /^[0-9]*\.?[0-9]+$/) {
-		    printV("Price: \$".$deal->price()."\n", 1);
+		    printV("Price: ".$deal->price()."\n", 1);
 		} else {
 		    dieN("Error extracting price\n");
 		}
 		
 		if (defined($deal->value()) &&
 		    $deal->value() =~ /^[0-9]*\.?[0-9]+$/) {
-		    printV("Value: \$".$deal->value()."\n", 1);
+		    printV("Value: ".$deal->value()."\n", 1);
 		} else {
 		    dieN("Error extracting value\n");
 		}
@@ -157,6 +188,7 @@
 		    printV("Unable to calculated discount, either price or ".
 			   "value are undefined\n", 1);
 		}
+
 		
 		if (defined($deal->num_purchased()) &&
 		    $deal->num_purchased =~ /^-?[0-9]+$/) {
@@ -164,34 +196,8 @@
 		} else {
 		    warnN("Error extracting num_purchased\n");
 		}
-		
-		if (defined($deal->expired())) {
-		    printV("Deal is expired\n", 1);
-		} else {
-		    if (defined($deal->deadline()) &&
-			crawlerutils::validDatetime($deal->deadline()))
-		    {
-			printV("Deal deadline: [".$deal->deadline()."]\n",
-			       1);
-		    } else {
-			dieN("Error extracting deal deadline\n");
-		    }
-		}
-		
-		if (defined($deal->expires()) &&
-		    crawlerutils::validDatetime($deal->expires()))
-		{
-		    printV("Deal expires : [".$deal->expires()."]\n", 1);
-		} else {
-		    dieN("Error extracting deal expires\n");
-		}
-		
-		if (defined($deal->image_url())) {
-		    printV("Image URL: [".$deal->image_url()."]\n", 1);
-		} else {
-		    dieN("Error extracting image url\n");
-		}
-		
+
+
 		if (defined($deal->text())) {
 		    printV("Deal text length: ".length($deal->text()).
 			   "\n", 1);
@@ -207,18 +213,48 @@
 		} else {
 		    dieN("Error extracting deal fine print\n");
 		}
-		
-		if (defined($deal->website())) {
-		    printV("Website: [".$deal->website()."]\n", 1);
+
+
+		if (defined($deal->expired())) {
+		    printV("Deal is expired\n", 1);
 		} else {
-		    dieN("Error extracting website url\n");
+		    if (defined($deal->deadline()) &&
+			crawlerutils::validDatetime($deal->deadline()))
+		    {
+			printV("Deal deadline: [".$deal->deadline()."]\n", 1);
+		    } else {
+			dieN("Error extracting deal deadline\n");
+		    }
 		}
+
+		if (defined($deal->expires()) &&
+		    crawlerutils::validDatetime($deal->expires()))
+		{
+		    printV("Deal expires : [".$deal->expires()."]\n", 1);
+		} else {
+		    dieN("Error extracting deal expires\n");
+		}
+		
+		if (defined($deal->image_url())) {
+		    printV("Image URL: [".$deal->image_url()."]\n", 1);
+		} else {
+		    dieN("Error extracting image url\n");
+		}
+		
 
 		if (defined($deal->name())) {
 		    printV("Business name: [".$deal->name()."]\n", 1);
 		} else {
 		    dieN("Error extracting business name\n");
 		}
+
+
+		if (defined($deal->website())) {
+		    printV("Website: [".$deal->website()."]\n", 1);
+		} else {
+		    dieN("Error extracting website url\n");
+		}
+
 
 		if (defined($deal->phone())) {
 		    printV("Business phone: [".$deal->phone()."]\n", 1);
@@ -237,8 +273,18 @@
 		    dieN("Error extracting any addresses\n");
 		}
 
+		if (defined($deal->category_id()) &&
+		    defined($category_map{$deal->category_id()})) {
+		    printV("Category: ".
+			   $category_map{$deal->category_id()}."\n", 1);
+		} else {
+		    dieN("Error extracting category\n");
+		}
+
 
 		print "\n";
+	    } else {
+		die "Invalid first line of file [$line]\n";
 	    }
 	    close($filehandle);
 	}

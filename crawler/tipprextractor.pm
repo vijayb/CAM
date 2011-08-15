@@ -9,7 +9,6 @@
     use warnings;
     use deal;
     use genericextractor;
-    use logger;
     use Time::Local;
 
     my %month_map = (
@@ -80,14 +79,14 @@
 	    $deal->num_purchased($1);
 	}
 
-	if (!defined($num_purchased) &&
-	    &genericextractor::containsPattern($deal_content_ref,
-					       "<span>0\\s+[Bb]ought")) {
-	    $deal->num_purchased(0);
+	$num_purchased = &genericextractor::extractFirstPatternMatched(
+	    $deal_content_ref, "<span>([0-9]+)\\s+[Bb]ought");
+	if (defined($num_purchased)) {
+	    $deal->num_purchased($num_purchased);
 	}
 
 
-	my $expired_regex = "alt=[\'\"]Expired";
+	my $expired_regex = "id=[\'\"]offer-view-expired-button[\'\"]";
 	if (&genericextractor::containsPattern($deal_content_ref,
 					       $expired_regex)) {
 	    $deal->expired(1);
@@ -230,7 +229,7 @@
 		$address =~ s/\s+$//;
 		$address =~ s/^\s+//;
 
-		if ($address =~ /\s([A-Za-z]+),?\s+[0-9]{5}/ &&
+		if ($address =~ /\s([A-Za-z]{2}),?\s+[0-9]{5}/ &&
 		    &genericextractor::isState($1)) {
 		    $deal->addresses($address);
 		}

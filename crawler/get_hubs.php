@@ -16,7 +16,7 @@ if (!$con) {
 mysql_select_db($_GET[database], $con) or die(mysql_error());
    
 
-$sql="SELECT * FROM Hubs";
+$sql="SELECT Hubs.url,Hubs.company_id,HubCities.city_id,Hubs.category_id,Hubs.use_cookie,Hubs.recrawl_deal_urls,Hubs.hub_contains_deal,Hubs.post_form FROM Hubs, HubCities WHERE Hubs.url=HubCities.hub_url";
 
 $result = mysql_query($sql, $con);
 
@@ -34,7 +34,8 @@ while ($i < $num) {
   $use_cookie = mysql_result($result, $i, "use_cookie");
   $recrawl_deal_urls = mysql_result($result, $i, "recrawl_deal_urls");
   $hub_contains_deal = mysql_result($result, $i, "hub_contains_deal");
-  echo "$url,$company_id,$city_id,$category_id,$use_cookie,$recrawl_deal_urls,$hub_contains_deal\n";
+  $post_form = mysql_result($result, $i, "post_form");
+  echo "$url,$company_id,$city_id,$category_id,$use_cookie,$recrawl_deal_urls,$hub_contains_deal,$post_form\n";
   $i++;
 }
 

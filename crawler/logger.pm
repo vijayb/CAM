@@ -21,6 +21,12 @@
     my $log_filename;
     my $log_file_handle;
 
+    my $logger_on = 0;
+    # Only perform logging if the crawler is using this package.
+    if ($0 =~ /crawler.pl/) {
+	$logger_on = 1;
+    }
+
     createLogFile();
     updateLogLevel();
 
@@ -29,7 +35,8 @@
 	return (LOG_DIRECTORY . LOG_FILE_PREFIX . sprintf("%d%02d%02d",
 							  1900+$timeData[5],
 							  $timeData[4]+1,
-							  $timeData[3]));
+							  $timeData[3])
+		. "_" . $$);
     }
 
     sub createLogMessageTimestamp {
@@ -44,6 +51,8 @@
     }
 
     sub LOG {
+	if (!$logger_on) { return; }
+
 	my ($msg, $msg_log_level);
 	unless (defined($_[0]) && defined($_[1])) {
 	    die "Incorrect use of LOG in logger package\n";
@@ -67,6 +76,8 @@
 
 
     sub createLogFile {
+	if (!$logger_on) { return; }
+
 	unless (-d LOG_DIRECTORY) {
 	    mkdir(LOG_DIRECTORY, 0777) || die "Couldn't create" . 
 		LOG_DIRECTORY . "\n";
@@ -86,6 +97,8 @@
     }
 
     sub updateLogLevel {
+	if (!$logger_on) { return; }
+
 	my $log_level_filename = "./" . LOG_LEVEL_FILE;
 	unless (open(FILE, $log_level_filename)) {
 	    LOG("Couldn't open log level file $log_level_filename, " .

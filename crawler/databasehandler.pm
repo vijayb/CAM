@@ -16,8 +16,9 @@
     use HTTP::Request::Common qw(POST);
     use Sys::Hostname;
 
-    my ($webserver, $database, $user, $password);
-    getargs::get(\$webserver, \$database, \$user, \$password);
+    my ($webserver, $database, $user, $password, $company_id_filter);
+    getargs::getCrawlerArgs(\$webserver, \$database, \$user,
+			    \$password, \$company_id_filter);
 
     my $browser = LWP::UserAgent->new();
 
@@ -115,6 +116,9 @@
 	    if (defined($deal->company_id())) {
 		$post_form{"company_id"} = $deal->company_id();
 	    }
+	    if (defined($deal->category_id())) {
+		$post_form{"category_id"} = $deal->category_id();
+	    }
 	    if (defined($deal->title())) {
 		$post_form{"title"} = $deal->title();
 	    }
@@ -206,49 +210,82 @@
 	if (!defined($hub_rows)) {
 	    die "Unable to obtain hubs in getHubProperties.\n";
 	}
-	my @hub_rows = split(/\s/, $hub_rows);
+	my @hub_rows = split(/\n/, $hub_rows);
 	my $invalid_hub_rows = 0;
-	my %dup_hubs;
-	my $dup_count = 0;
 
 	foreach my $row (@hub_rows) {
 	    my @hub_parts = split(/,/, $row);
 	    $hub_parts[0] =~ s/\s//g;
 
-	    if ($#hub_parts != 6 ||
+	    if (($#hub_parts != 6 && $#hub_parts != 7) ||
 		$hub_parts[0] !~ /^(((http|https):\/\/)?([[a-zA-Z0-9]\-\.])+(\.)([[a-zA-Z0-9]]){2,4}([[a-zA-Z0-9]\/+=%&_\.~?\-]*))*/ || # hub url
 		$hub_parts[1] !~ /^[1-9][0-9]*$/ || # company_id (not zero)
 		$hub_parts[2] !~ /^[1-9][0-9]*$/ || # city_id (not zero)
 		$hub_parts[3] !~ /^[0-9]+$/ || # category_id (can be zero)
 		$hub_parts[4] !~ /^[0-1]$/ || # use cookie to crawl hub
 		$hub_parts[5] !~ /^[0-1]$/ || # recrawl deal page on this hub
-		$hub_parts[6] !~ /^[0-1]$/) # hub page contains deal
+		$hub_parts[6] !~ /^[0-1]$/ || # hub page contains deal
+		# If the 7th part exists, it should be a whitespace separated
+		# post form of key-value pairs
+		($#hub_parts == 7 && !isValidPostForm($hub_parts[7])))
 	    {
 		$invalid_hub_rows++;
-	    } else {
-		${$hash_ref}{$hub_parts[0]} = hub->new();
-		${$hash_ref}{$hub_parts[0]}->url($hub_parts[0]);
-		${$hash_ref}{$hub_parts[0]}->company_id($hub_parts[1]+0);
-		${$hash_ref}{$hub_parts[0]}->city_id($hub_parts[2]+0);
-		${$hash_ref}{$hub_parts[0]}->category_id($hub_parts[3]+0);
-		${$hash_ref}{$hub_parts[0]}->use_cookie($hub_parts[4]+0);
-		${$hash_ref}{$hub_parts[0]}->recrawl_deal_urls($hub_parts[5]+0);
-		${$hash_ref}{$hub_parts[0]}->hub_contains_deal($hub_parts[6]+0);
+	    }
+	    # Allow user of crawler to only crawl specific companies. This
+	    # is useful for debugging crawler/extraction problems
+	    elsif ($company_id_filter == 0 ||
+		   $hub_parts[1] == $company_id_filter) 
+	    {
+		if (!defined(${$hash_ref}{$hub_parts[0]})) {
+		    ${$hash_ref}{$hub_parts[0]} = hub->new();
+		    ${$hash_ref}{$hub_parts[0]}->url($hub_parts[0]);
+		    ${$hash_ref}{$hub_parts[0]}->company_id($hub_parts[1]+0);
+		    ${$hash_ref}{$hub_parts[0]}->category_id($hub_parts[3]+0);
+		    ${$hash_ref}{$hub_parts[0]}->use_cookie($hub_parts[4]+0);
+		    ${$hash_ref}{$hub_parts[0]}->
+			recrawl_deal_urls($hub_parts[5]+0);
+		    ${$hash_ref}{$hub_parts[0]}->
+			hub_contains_deal($hub_parts[6]+0);
 
-		if (!defined($dup_hubs{$hub_parts[0]})) {
-		    $dup_hubs{$hub_parts[0]} = 1;
-		} else {	
-		    $dup_hubs{$hub_parts[0]}++;
-		    $dup_count++;
+		    if ($#hub_parts == 7) {
+			${$hash_ref}{$hub_parts[0]}->post_form($hub_parts[7]);
+			my $post_ref =
+			    ${$hash_ref}{$hub_parts[0]}->post_form();
+			
+			if (scalar(keys(%{$post_ref})) == 0) {
+			    die "Error extracting post form in ".
+				"getHubProperties\n";
+			}
+		    }
 		}
+
+		${$hash_ref}{$hub_parts[0]}->city_ids($hub_parts[2]+0);
 	    }
 	}
 
 	my $log_msg = ($#hub_rows+1)." hubs rows read from Hubs table:\n".
+	    scalar(keys(%{$hash_ref}))." unique hubs\n".
 	    (1+$#hub_rows - $invalid_hub_rows)." valid rows.\n".
-	    $invalid_hub_rows." invalid rows. ".
-	    $dup_count." duplicate hubs.\n";
+	    $invalid_hub_rows." invalid rows.";
 	logger::LOG($log_msg, 2);
+    }
+
+    # Helper function for getHubProperties. See above. Makes sure a string
+    # is splittable into key-value pairs, which represent the data for a 
+    # post form.
+    sub isValidPostForm {
+	if (!@_) {
+	    return 0;
+	}
+	my $string = shift;
+	my @post_parts = split(/\s+/, $string);
+	# Basically just check there is at least one key value pair
+	# and that the number of parts of the post string is even.
+	if ($#post_parts >= 1 && (($#post_parts+1)%2 == 0)) {
+	    return 1;
+	}
+
+	return 0;
     }
 
 
@@ -263,7 +300,8 @@
 	my $recrawlable_deals = get $request;
 	
 	if (!defined($recrawlable_deals)) {
-	    die "Unable to obtain recrawlable deals in getRecrawlableDealUrls.\n";
+	    die "Unable to obtain recrawlable deals in getRecrawlableDealUrls.".
+		" Request [$request]\n";
 	}
 	
 	my @recrawlable_deals = split(/\n/, $recrawlable_deals);
@@ -274,6 +312,7 @@
 	foreach my $row (@recrawlable_deals) {
 	    my @parts = split(/,/, $row);
 	    $parts[0] =~ s/\s//g;
+
 	    if ($#parts != 3 ||
 		$parts[0] !~ /^(((http|https):\/\/)?([[a-zA-Z0-9]\-\.])+(\.)([[a-zA-Z0-9]]){2,4}([[a-zA-Z0-9]\/+=%&_\.~?\-]*))*/ || # hub url
 		$parts[1] !~ /^[1-9][0-9]*$/ || # company_id (not zero)
@@ -282,7 +321,10 @@
 		!crawlerutils::validDatetime($parts[3]))
 	    {
 		$invalid_recrawlable_deals++;
-	    } else {
+	    }
+	    # Allow user of crawler to only crawl specific companies. This
+	    # is useful for debugging crawler/extraction problems
+	    elsif ($company_id_filter == 0 || $parts[1] == $company_id_filter) {
 		${$deal_properties_ref}{$parts[0]} = dealproperties->new();
 		${$deal_properties_ref}{$parts[0]}->url($parts[0]);
 		${$deal_properties_ref}{$parts[0]}->company_id($parts[1]+0);

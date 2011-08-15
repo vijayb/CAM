@@ -10,16 +10,12 @@ if (!isset($_GET[database]) || strlen($_GET[database]) == 0 ||
 
 
 $updates = "";
-if (isset($_POST[yelp_rating])) {
-  $updates = "yelp_rating='$_POST[yelp_rating]',";
-}
-if (isset($_POST[yelp_url])) {
-  $updates = $updates."yelp_url='$_POST[yelp_url]',";
-}
-if (isset($_POST[yelp_categories])) {
-  $updates = $updates."yelp_categories='$_POST[yelp_categories]',";
-}
+foreach ($_POST as $key => $value) {
+  if (strcmp($key, "url") != 0) {
+    $updates = $updates."$key='$value',";
 
+  }
+}
 
 // Remove trailing comma from updates
 $updates = rtrim($updates, ',');
@@ -35,7 +31,7 @@ mysql_select_db("$_GET[database]", $con) or die(mysql_error());
 if (!mysql_query($sql, $con)) {
   die('Error: '.mysql_error());
 } else {
-  echo "Successfully inserted into Addresses.";
+  echo "Successfully inserted yelp review";
 }
 
 

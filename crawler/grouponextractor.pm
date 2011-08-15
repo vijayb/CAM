@@ -9,7 +9,8 @@
     use warnings;
     use deal;
     use genericextractor;
-    use logger;
+    use HTML::TreeBuilder;
+    use Encode;
 
     my %month_map = (
 	"Jan" => 1,
@@ -26,9 +27,13 @@
 	"Dec" => 12
     );
     sub extract {
+	my $tree = HTML::TreeBuilder->new;
 	my $deal = shift;
 	my $deal_content_ref = shift;
 	
+	$tree->parse(decode_utf8 $$deal_content_ref);
+	$tree->eof();
+
 	my $title_regex = "(<h2><a href.*)";
 	my $title_filter = "<[^>]+>";
 	my $title = &genericextractor::extractFirstPatternMatched(
@@ -153,23 +158,21 @@
 	}
 
 
-	my $website_regex = "href=[\'\"]([^\'\"]+)[\'\"][^>]*>[Cc]ompany\\s+[Ww]ebsite";
-	my $website = &genericextractor::extractFirstPatternMatched(
-	    $deal_content_ref, $website_regex);
-	if (defined($website) && $website =~ /http:\/\/.*/) {
-	    $deal->website($website);  
+	my @name = $tree->look_down(
+	    sub{$_[0]->tag() eq 'h3' && defined($_[0]->attr('class')) &&
+		    $_[0]->attr('class') eq "name"});
+	if (@name) {
+	    $deal->name($name[0]->as_text());
 	}
 
-	my $name = &genericextractor::extractBetweenPatternsN(
-	    3, $deal_content_ref, "<div[^i]+id=[\'\"]company_box",
-	    "<\\/h3>", "<[^>]+>");
-	if (defined($name)) {
-	    $name =~ s/^\s+//;
-	    $name =~ s/\s+$//;
-	    if (length($name) > 0) {
-		$deal->name($name);
-	    }
+
+	my @website = $tree->look_down(
+	    sub{$_[0]->tag() eq 'a' && defined($_[0]->attr('href')) &&
+		    $_[0]->as_text() =~ /company\s+website/i});
+	if (@website && $website[0]->attr('href') =~ /^http/) {
+	    $deal->website($website[0]->attr('href'));
 	}
+
 
 	my $no_address_regex =
 	    "class=[\'\"]bold\\s+location_note[\'\"]>[Rr]edeem";
@@ -186,8 +189,12 @@
 		    $address =~ s/\s+/ /g;
 		    $address =~ s/\s+$//;
 		    
-		    if ($address =~ /\s([A-Za-z]+)\s+([0-9]{5})/ &&
-			&genericextractor::isState($1)) {
+		    if (($address =~ /,\s+([A-Za-z\s]+)\s+([0-9]{5})/ &&
+			&genericextractor::isState($1)) ||
+			# Check for Canadian addresses:
+			($address =~
+			 /,\s+([A-Za-z\s]+)\s+([A-Z0-9]{3}\s[A-Z0-9]{3})/ &&
+			 &genericextractor::isState($1))) {
 			my $zip = $2;
 			$address =~ s/$zip(.*)/$zip/;
 			# Phone number is put after the address in groupon pages
@@ -203,6 +210,7 @@
 	}
 
 
+	$tree->delete();
     }
   
 

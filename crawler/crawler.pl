@@ -15,6 +15,7 @@ use deal;
 use dealproperties;
 use databasehandler;
 use dealextractor;
+use dealclassifier;
 use dealurlextractor;
 use failedextractions;
 use ratelimiter;
@@ -73,7 +74,11 @@ while (1) { # Main crawler loop
 	{
 	    print "Crawling hub: $hub_url\n";
 	    my $response;
-	    if ($hub_properties{$hub_url}->use_cookie()) {
+	    if ($hub_properties{$hub_url}->has_post_form()) {
+		$response = downloader::getURLWithPost($hub_url,
+						       $hub_properties{$hub_url}
+						       ->post_form());
+	    } elsif ($hub_properties{$hub_url}->use_cookie()) {
 		print "$hub_url needs cookie\n";
 		$response = downloader::getURLWithCookie($hub_url);
 	    } else {
@@ -126,6 +131,7 @@ while (1) { # Main crawler loop
 
 	$hub_properties{$hub_url}->last_crawled(time());
     }
+
 
     # The above section completes the crawling and extracting of hubs.
     # Below we process the deal urls that were extracted above.
@@ -195,8 +201,10 @@ while (1) { # Main crawler loop
 	    my $deal = deal->new();
 	    $deal->inherit_from_deal_properties($properties);
 	    dealextractor::extractDeal($deal, \$deal_content);
+	    dealclassifier::classifyDeal($deal, \$deal_content);
 
 	    my $error = $deal->check_for_extraction_error();
+
 	    if (defined($error)) {
 		failedextractions::store($deal->url(), $deal_content, $error);
 	    }
@@ -282,7 +290,7 @@ while (1) { # Main crawler loop
     }
     
 
-    print "Heartbeat...",time(),"\n";
+    print "Heartbeat... pid [$$] ",time(),"\n";
     sleep(1);
     logger::updateLogLevel();
 

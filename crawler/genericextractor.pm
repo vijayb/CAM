@@ -8,7 +8,24 @@
     use strict;
     use warnings;
     use deal;
-    use logger;
+
+    my %stop_words = ( "and" => 1,
+		       "the" => 1,
+		       "any" => 1,
+		       "are" => 1,
+		       "but" => 1,
+		       "can" => 1,
+		       "did" => 1,
+		       "get" => 1,
+		       "got" => 1,
+		       "had" => 1,
+		       "has" => 1,
+		       "was" => 1,
+		       "let" => 1,
+		       "not" => 1,
+		       "is" => 1,
+		       "at" => 1 ); 
+
 
     my @state_abbreviations = ('AK', 'AL', 'AR', 'AZ', 'CA', 'CO', 'CT', 'DC',
 			       'DE', 'FL', 'GA', 'HI', 'IA', 'ID', 'IL', 'IN',
@@ -16,7 +33,8 @@
 			       'MO', 'MS', 'MT', 'NC', 'ND', 'NE', 'NH', 'NJ',
 			       'NM', 'NV', 'NY', 'OH', 'OK', 'OR', 'PA', 'RI',
 			       'SC', 'SD', 'TN', 'TX', 'UT', 'VA', 'VT', 'WA',
-			       'WI', 'WV', 'WY');
+			       'WI', 'WV', 'WY', 'AB', 'BC', 'MB', 'NB', 'NL',
+			       'NT', 'NS', 'NU', 'ON', 'PE', 'QC', 'SK', 'YT');
 
     my @state_names = ('ALABAMA', 'ALASKA', 'ARIZONA', 'ARKANSAS',
 		       'CALIFORNIA', 'COLORADO', 'CONNECTICUT', 'DELAWARE',
@@ -30,7 +48,10 @@
 		       'PENNSYLVANIA', 'RHODE ISLAND', 'SOUTH CAROLINA',
 		       'SOUTH DAKOTA', 'TENNESSEE', 'TEXAS', 'UTAH', 'VERMONT',
 		       'VIRGINIA', 'WASHINGTON', 'WEST VIRGINIA', 'WISCONSIN',
-		       'WYOMING');
+		       'WYOMING', 'ALBERTA', 'BRITISH COLUMBIA', 'MANITOBA',
+		       'NEW BRUNSWICK', 'NEWFOUNDLAND',
+		       'NEWFOUNDLAND AND LABRADOR', 'NOVA SCOTIA', 'ONTARIO',
+		       'PRINCE EDWARD ISLAND', 'QUEBEC', 'SASKATCHEWAN');
 
     my %states;
     foreach my $state (@state_abbreviations, @state_names) {
@@ -239,6 +260,175 @@
 	}
 
 	return @matches;
+    }
+
+
+    # Takes two strings representing business names and determines
+    # whether they represent the same business.
+    sub similarEnough {
+	if ($#_ != 1) { die "Incorrect usage of similarEnough\n"; }
+	my $s1 = lc($_[0]);
+	my $s2 = lc($_[1]);
+	my $long;
+	my $short;
+	
+	if (length($s1)> length($s2)) {
+	    $long = $s1;
+	    $short = $s2;
+	} else {
+	    $long = $s2;
+	    $short = $s1;
+	}
+	
+	# We don't care about non alphanumeric characters when comparing
+	# the similarity of two names.
+	$long =~ s/[^a-z0-9\s]//g;
+	$short =~ s/[^a-z0-9\s]//g;
+	
+	my $edit_distance = editDistance($short, $long);
+	
+	my $score = (1.0*$edit_distance)/(1.0*length($long));
+	my $threshold = 0.15 + length($long)/100.0;
+	
+	# If similar enough based on edit distance:
+	if ($score <= $threshold) {
+	    return 1;
+	} 
+	
+	# Check for substrings:
+	if (length($short) >= 5 && $long =~ /$short/i) {
+	    return 1;
+	}
+	
+	if (length($short) >= 3 && $long =~ /^$short/i) {
+	    return 1;
+	}
+	
+	
+	# Now check if most of the words of $short are in $long. This handles
+	# cases like "Antoni's Restaurant-Diner & Lounge" and "Antoni's
+	# Diner" (all the words in the shorter string are in the longer one).
+	my @shortwords = split(/\s/, $short);
+	my $shortcount = 0;
+	foreach my $shortword (@shortwords) {
+	    if (length($shortword) >=3 && !defined($stop_words{$shortword}) &&
+		$long =~ /$shortword/i) {
+		$shortcount++;
+	    }
+	}
+	if ($#shortwords > 0) {
+	    $score =(1.0*$shortcount)/(1.0 + 1.0*$#shortwords);
+	    if ($score > 0.7) { return 1; }
+	}
+	
+	
+	return 0;
+    }
+
+
+    # Return the Levenshtein distance (also called Edit distance) 
+    # between two strings
+    #
+    # The Levenshtein distance (LD) is a measure of similarity between two
+    # strings, denoted here by s1 and s2. The distance is the number of
+    # deletions, insertions or substitutions required to transform s1 into
+    # s2. The greater the distance, the more different the strings are.
+    #
+    # The algorithm employs a proximity matrix, which denotes the distances
+    # between substrings of the two given strings. Read the embedded comments
+    # for more info. If you want a deep understanding of the algorithm, print
+    # the matrix for some test strings and study it
+    #
+    # The beauty of this system is that nothing is magical - the distance
+    # is intuitively understandable by humans
+    #
+    # The distance is named after the Russian scientist Vladimir
+    # Levenshtein, who devised the algorithm in 1965
+    #
+    sub editDistance {
+	# $s1 and $s2 are the two strings
+	# $len1 and $len2 are their respective lengths
+	#
+	my ($s1, $s2) = @_;
+	my ($len1, $len2) = (length $s1, length $s2);
+	
+	# If one of the strings is empty, the distance is the length
+	# of the other string
+	#
+	return $len2 if ($len1 == 0);
+	return $len1 if ($len2 == 0);
+	
+	my %mat;
+	
+	# Init the distance matrix
+	#
+	# The first row to 0..$len1
+	# The first column to 0..$len2
+	# The rest to 0
+	#
+	# The first row and column are initialized so to denote distance
+	# from the empty string
+	#
+	for (my $i = 0; $i <= $len1; ++$i) {
+	    for (my $j = 0; $j <= $len2; ++$j) {
+		$mat{$i}{$j} = 0;
+		$mat{0}{$j} = $j;
+	    }
+	    
+	    $mat{$i}{0} = $i;
+	}
+	
+	# Some char-by-char processing is ahead, so prepare
+	# array of chars from the strings
+	#
+	my @ar1 = split(//, $s1);
+	my @ar2 = split(//, $s2);
+	
+	for (my $i = 1; $i <= $len1; ++$i) {
+	    for (my $j = 1; $j <= $len2; ++$j) {
+		# Set the cost to 1 iff the ith char of $s1
+		# equals the jth of $s2
+		# 
+		# Denotes a substitution cost. When the char are equal
+		# there is no need to substitute, so the cost is 0
+		#
+		my $cost = ($ar1[$i-1] eq $ar2[$j-1]) ? 0 : 1;
+		
+		# Cell $mat{$i}{$j} equals the minimum of:
+		#
+		# - The cell immediately above plus 1
+		# - The cell immediately to the left plus 1
+		# - The cell diagonally above and to the left plus the cost
+		#
+		# We can either insert a new char, delete a char or
+		# substitute an existing char (with an associated cost)
+		#
+		$mat{$i}{$j} = min([$mat{$i-1}{$j} + 1,
+				    $mat{$i}{$j-1} + 1,
+				    $mat{$i-1}{$j-1} + $cost]);
+	    }
+	}
+	
+	# Finally, the Levenshtein distance equals the rightmost bottom cell
+	# of the matrix
+	#
+	# Note that $mat{$x}{$y} denotes the distance between the substrings
+	# 1..$x and 1..$y
+	#
+	return $mat{$len1}{$len2};
+    }
+
+    # minimal element of a list
+    #
+    sub min {
+	my @list = @{$_[0]};
+	my $min = $list[0];
+	
+	foreach my $i (@list) {
+	    $min = $i if ($i < $min);
+	}
+	
+	return $min;
     }
 
     1;

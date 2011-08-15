@@ -16,7 +16,7 @@ use HTTP::Request::Common qw(POST);
 use getargs;
 
 my ($webserver, $database, $user, $password);
-getargs::get(\$webserver, \$database, \$user, \$password);
+getargs::getBasicArgs(\$webserver, \$database, \$user, \$password);
 
 
 my $browser = LWP::UserAgent->new();
@@ -48,6 +48,11 @@ while (1) {
     foreach my $id (keys %raw_addresses) {
 	print "Geocoding id $id, address [$raw_addresses{$id}]\n";
 	my $location = $geocoder->geocode(location => $raw_addresses{$id});
+
+	if (!defined($location)) { 
+	    print "Warning, no address found for [$raw_addresses{$id}]\n";
+	    next; 
+	}
 
 	my @address_components = @{$location->{address_components}};
 	
@@ -130,10 +135,10 @@ while (1) {
 	} else {
 	    print "success!\n";
 	}
-	sleep(2);
+	sleep(10);
     }
     
 
     print "Sleeping for a few seconds... ".time()."\n";
-    sleep(10);
+    sleep(30);
 }

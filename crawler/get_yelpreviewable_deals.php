@@ -4,7 +4,7 @@ if (!isset($_GET[database]) || strlen($_GET[database]) == 0 ||
     !isset($_GET[user]) || strlen($_GET[user]) == 0 ||
     !isset($_GET[password]) || strlen($_GET[password]) == 0 ||
     !isset($_GET[max_days]) ||
-    !preg_match("/^[1-9][0-9]?+$/", $_GET[max_days])) {
+    !preg_match("/^[1-9][0-9]*$/", $_GET[max_days])) {
   die("Error: missing variable - either database,user,password or max_days");
 }
 

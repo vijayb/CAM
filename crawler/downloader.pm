@@ -47,6 +47,17 @@
 	return $browser->get($url);
     }
 
+    sub getURLWithPost {
+ 	unless ($#_ == 1) {
+	    die "Incorrect usage of getURLWithPost in downloader.\n";
+	}
+
+	my $url = shift;
+	my $post_form_ref = shift;
+
+	return $browser->post($url, \%{$post_form_ref});
+    }
+
     sub getURLWithCookie {
 	unless (@_)
 	{ die "Incorrect usage of getURLWithCookie in downloader.\n"; }
@@ -70,7 +81,8 @@
 		$response = $browser->get($url);
 		$domain_cookies{$domain} = 1;
 		$cookie_jar->save(COOKIE_FILE);
-		logger::LOG("Set cookie to [$cookie_jar->as_string()]", 4);
+		logger::LOG("Set cookie to [".
+			    $cookie_jar->as_string()."]", 5);
 	    }
 
 	    $response = $browser->get($url);

@@ -9,7 +9,6 @@
     use warnings;
     use deal;
     use genericextractor;
-    use logger;
     use crawlerutils;
 
     my %month_map = (
@@ -182,7 +181,7 @@
 	# Get both the name and website in one go.
 	if (defined($deal->title())) {
 	    my $website_regex = 
-		"<a\\s+href=[\'\"]([^\'\"]+)[\'\"][^>]*>".$deal->title();
+		"href=[\'\"]([^\'\"]+)[\'\"][^>]*>".$deal->title();
 	    if (defined($deal->text()) && $deal->text() =~ $website_regex) {
 		$deal->website($1);
 		$deal->name($deal->title());
@@ -204,7 +203,7 @@
 		$address =~ s/\s+$//;
 		$address =~ s/^\s+//;
 		
-		if ($address =~ /\s([A-Za-z]+)\s+([0-9]{5})/ &&
+		if ($address =~ /\s([A-Za-z]{2})\s+([0-9]{5})/ &&
 		    &genericextractor::isState($1)) {
 		    my $zip = $2;
 		    $address =~ s/$zip(.*)/$zip/;

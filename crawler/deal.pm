@@ -64,6 +64,13 @@
 	return $self->{company_id};
     }
 
+ 
+    sub category_id {
+	my $self = shift;
+	if (@_) { $self->{category_id} = shift; }
+	return $self->{category_id};
+    }
+
     sub title {
 	my $self = shift;
 	if (@_) { $self->{title} = shift; }
@@ -324,6 +331,11 @@
 	    $self->{website} !~ /^http[s]?:\/\/.*/) {
 	    return "website";
 	}
+
+	#if (!defined($self->{category_id}) ||
+	#    $self->{category_id} !~ /^[0-9]+$/) {
+	#    return "category_id";
+	#}
 
 	# TODO: get rid of the != 3 check. just a hack because
 	# buywithme (company_id == 3) never has phone numbers.

@@ -9,7 +9,6 @@
     use warnings;
     use deal;
     use genericextractor;
-    use logger;
 
     my %month_map = (
 	"Jan" => 1,
@@ -173,14 +172,12 @@
 		10, \$address_text, "<li>([^<]+)");
 	    if ($#addresses >= 0) {
 		foreach my $address (@addresses) {
-		    if ($address =~ /\s([A-Za-z]+),?\s+([0-9]{5})/ &&
+		    if ($address =~ /\s([A-Za-z]{2}),?\s+([0-9]{5})/ &&
 			&genericextractor::isState($1)) {
 			$deal->addresses($address);
 		    }
 		}
 	    }
-
-
 	}
     }
 

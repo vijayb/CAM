@@ -12,11 +12,12 @@
 
 	$self->{url} = undef;
 	$self->{company_id} = undef;
-	$self->{city_id} = undef;
+	$self->{city_ids} = ();
 	$self->{category_id} = undef;
 	$self->{use_cookie} = undef;
 	$self->{recrawl_deal_urls} = undef;
 	$self->{hub_contains_deal} = undef;
+	$self->{post_form} = ();
 	$self->{last_crawled} = 0;
 	
 	bless($self);
@@ -35,10 +36,13 @@
 	return $self->{company_id};
     }
 
-    sub city_id {
+    sub city_ids {
 	my $self = shift;
-	if (@_) { $self->{city_id} = shift; }
-	return $self->{city_id};
+	if (@_) { 
+	    my $city = shift;
+	    ${$self->{city_ids}}{$city} = 1;
+	}
+	return \%{$self->{city_ids}};
     }
 
     sub category_id {
@@ -63,6 +67,30 @@
 	my $self = shift;
 	if (@_) { $self->{hub_contains_deal} = shift; }
 	return $self->{hub_contains_deal};
+    }
+
+    sub post_form {
+	my $self = shift;
+	if (@_) { 
+	    # Post string comes as white space separated key/value pairs
+	    # for post form
+	    my $string = shift;
+	    my @post_values = split(/\s+/, $string);
+	    
+	    if ($#post_values >= 1 && (($#post_values+1)%2) == 0) {
+		for (my $i=0; $i <= $#post_values; $i+=2) {
+		    ${$self->{post_form}}{$post_values[$i]} =
+			$post_values[$i+1];
+		}
+	    }
+	}
+
+	return \%{$self->{post_form}};
+    }
+
+    sub has_post_form {
+	my $self = shift;
+	return scalar(keys(%{$self->{post_form}})) > 0;
     }
 
     sub last_crawled {

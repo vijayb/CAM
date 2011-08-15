@@ -113,7 +113,12 @@
 	    # Vancouver, WA at the same time, since they're
 	    # so close by.
 	    my $city_ids_size = keys(%{$self->{city_ids}});
-	    ${$self->{city_ids}}{$parent_hub->city_id()} = 1;
+
+	    my $cities_ref = $parent_hub->city_ids();
+	    foreach my $city (keys %{$cities_ref}) {
+		${$self->{city_ids}}{$city} = 1;
+	    }
+
 	    if ($city_ids_size != scalar(keys(%{$self->{city_ids}}))) {
 		# We inherited a new city_id
 		$self->{city_ids_updated} = 1;
